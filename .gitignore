@@ -1,0 +1,4 @@
+.idea/
+venv/
+# macOS stuff
+.DS_Store
