@@ -1,69 +1,74 @@
-import pygame
-
-from internal.PygameApp import Screen
+import pygame, sys, os
+# sys.path.append(os.getcwd())
+from internal.PygameApp import Screen, Graphic
 from widgets.BasicMenuBar import BasicMenuBar
+from widgets.BasicButton import BasicButton
 
 clock = pygame.time.Clock()
+
+
+'''
+    Map Maker screen structure:
+        - sidebar with menu options
+        - toggle select different block types
+            - from selection, we can manipulate what is actually being made on the map
+
+    this thing will immediately anchor itself to the top corner of screen
+'''
+class MapMakerPane:
+    def __init__(self, dims, screen, sprite_folder=None, background_color=(255,255,255)):
+        self.width = dims[0] if dims[0] >= 1 else screen.width * dims[0]
+        self.height = dims[1] if dims[1] >= 1 else screen.height * dims[1]
+        self.sprite_folder = sprite_folder
+        self.background_color = background_color
+
+        # make some default graphics here
+        if not self.sprite_folder:
+            pass
+        pass
 
 
 def action():
     print('action time!')
 
+
 @Screen
 def map_maker_screen(size, screen):
-    # keeping track of what matrix values are selected and how far out to go
-    matrix_data = set()
-    max_x, max_y = size[0], size[1]
-
-    # this is assuming 16:9 aspect ratio... it will always assume that
-    box_dims = size[0] // 32
-
-    # scrolling
-    offset_x, offset_y = 0, 0
-
     menu = BasicMenuBar(
         screen, 100, 100, menu_items=['reset', 'load', 'save', 'back'], menu_actions=[action, action, action, action],
-        center=False, background_color=(0, 0, 0, 0), ignore_title=True, font_color=(255,255,255),
-        spacing=1.1, margin_left=size[0]-100
+        font_color=(255, 255, 255, 0), font_size=15, menu_background_color=(0, 0, 0,1)
+    )
+
+    btn = BasicButton(
+        (100,100), (100,100), action, screen, src='man_idle.png',
+        border=5, border_color=(0, 0, 0)
     )
 
     running = True
 
-    image = pygame.image.load('../tests/man_idle.png').convert()
-
     while 1:
-
-        if not running:
-            print('not running')
-            break
-
         clock.tick(60)
+
+        screen.fill((0, 0, 0))
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                running = False
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_DOWN:
-                    menu.set_active(1)
+                    menu.set_active_toggle(1)
                 elif event.key == pygame.K_UP:
-                    menu.set_active(-1)
+                    menu.set_active_toggle(-1)
                 elif event.key == pygame.K_SPACE:
-                    if menu.get_active() == len(menu.menu_items)-1:
-                        running = False
-                        break
-                    menu.execute_action()
+                    menu.execute_action_toggle()
 
-        keys = pygame.key.get_pressed()
-
-        if keys[pygame.K_w]:
-            offset_y += 1
-            print(offset_y)
-
-        # Make stuff after the screen.fill call
-        screen.fill((0, 0, 0))
-
-        screen.blit(image, (0, 300))
         menu.render()
+        btn.render()
 
-        pygame.display.update()
+        if running == False:
+            break
+
         pygame.display.flip()
+
+    pygame.quit()

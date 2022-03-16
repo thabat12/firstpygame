@@ -1,123 +1,177 @@
 import pygame
 
-'''
-    Basic Menu Bar will return rectangles that are able to be rendered
-    User must render the menu items manually
-'''
-
 
 class BasicMenuBar:
-    def __init__(self, screen, menu_width, menu_height, center=True, margin_left=0,
-                 margin_top=0, font_size=30, menu_items=['test'], menu_actions=[],
-                 background_color=(255, 255, 255), menu_items_color=(255, 255, 255), font_color=(0, 0, 0),
-                 active_color=(0, 255, 0), menu_title='Menu', ignore_title=False, spacing= 0.1):
-        if not menu_items or not menu_actions or len(menu_items) != len(menu_actions):
-            raise Exception('''
-                Menu items and actions are not paried properly
-                - must be at least one menu item
-                - menu items must correspond with menu actions
+    def __init__(self, screen, menu_width, menu_height, menu_items=[], menu_actions=[],
+                 pos_x=0, pos_y=0, menu_background_color=(255, 255, 255), font_color=(0, 0, 0),
+                 active_color=(0, 255, 0), title_color=(0, 0, 0), font_style='freesansbold.ttf',
+                 font_size=20, title_font_size=30, menu_item_spacing=10, menu_padding=None,
+                 menu_title='', cursor=False):
+
+        '''
+            Handling exceptions:
+                - If I am supplying a menu padding, at least have the top and bottom values
+                - I need menu items that correspond to menu actions (these can be None values)
+        '''
+        if menu_padding is None:
+            menu_padding = {'t': 10, 'b': 10}
+        elif set(menu_padding.keys()) != {'t', 'b'}:
+            raise Exception(f'''
+                Menu items MUST have top and bottom arguments as such:
+                    ex. menu_padding = {{'t': 10, 'b': '10'}}
+
+                    Supplied keys: {set(menu_padding.keys())}
             ''')
 
-        self.screen = screen
-        screen_size = screen.get_size()
-        print(f'screen size {screen_size}')
+        if not menu_items or not menu_actions:
+            raise Exception(f'''
+                Must fill in menu_items and menu_actions with corresponding values
+                    {menu_items} {'EMPTY = NOT GOOD' if not menu_items else 'OK'}
+                    {menu_actions} {'EMPTY = NOT GOOD' if not menu_items else 'OK'}
+                    {'Matching Length: OK' if len(menu_items) == len(menu_actions) else 'Matching Length: NOT GOOD'}
+            ''')
 
-        if center:
-            self.pos_left, self.pos_top = (screen_size[0] // 2) - (menu_width // 2), (screen_size[1] // 2) - (
-                        menu_height // 2)
-            self.menu_bar = pygame.rect.Rect(self.pos_left, self.pos_top, menu_width, menu_height)
-        else:
-            self.pos_left, self.pos_top = margin_left, margin_top
-            self.menu_bar = pygame.rect.Rect(self.pos_left, self.pos_top, menu_width, menu_height)
-
-        # assigning all constants
+        '''
+            Setting up constants:
+                - For use in later functions
+                - Screen is private since I would already have that access in main code
+        '''
+        self.__screen = screen
+        self.menu_width = menu_width if menu_width > 1 else self.__screen.get_size()[0] * menu_width
+        self.menu_height = menu_height if menu_width > 1 else self.__screen.get_size()[1] * menu_height
         self.menu_items = menu_items
         self.menu_actions = menu_actions
-        self.font_size = font_size
-        self.menu_background_color = background_color
-        self.menu_items_color = menu_items_color
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.menu_background_color = menu_background_color
         self.font_color = font_color
         self.active_color = active_color
+        self.title_color = title_color
+        self.font_style = font_style
+        self.font_size = font_size
+        self.title_font_size = title_font_size
+        self.menu_item_spacing = menu_item_spacing
+        self.menu_padding = menu_padding
         self.menu_title = menu_title
-        self.ignore_title = ignore_title
-        self.spacing = spacing
+        self.cursor = cursor
 
-        self.active = 0
-
-        print(self.menu_items)
-
-    def render(self):
-        menu_items_list = self.get_menu_items_list()
-        pygame.draw.rect(self.screen, self.menu_background_color, self.menu_bar)
-
-        self.screen.blit(menu_items_list[0][0], menu_items_list[0][1])
-
-        for text, text_rect in menu_items_list[1:]:
-            # TODO: make fancy menu tiles
-            # menu_tile = pygame.rect.Rect(text_rect.left, text_rect.top, text_rect.width, text_rect.height)
-            # pygame.draw.rect(self.screen, self.menu_items_color, menu_tile)
-            # print(f'this is the text rect: {text_rect} and the pos top {self.pos_top}')
-            self.screen.blit(text, text_rect)
-
-    def get_menu_items_list(self):
-        # with 90% width for space take-up
-        menu_item_left_bound = self.pos_left + self.menu_bar.size[0] // 2
-        menu_item_top_bound = self.pos_top + int(self.menu_bar.size[1] * 0.2)
-
-        temp_top, temp_left = menu_item_top_bound, menu_item_left_bound
-
-        menu_items_list = []
-
-        font = pygame.font.Font('freesansbold.ttf', self.font_size)
+        self.__active = -1 if self.cursor else 0
 
         '''
-            General process on how the menu items are being built
-                we make the text
-                center it in the right place
-                add it to the render list
-                set new offset for next element
+            The menu bar will always be the same, so no need to recalculate that every time
         '''
 
-        if not self.ignore_title:
-            text = font.render(self.menu_title, True, (0, 0, 0))
-            text_rect = text.get_rect()
-            text_rect.center = (
-                temp_left,
-                temp_top
-            )
+        # need this for rendering the actual menu
+        self.menu_box_obj = pygame.rect.Rect((self.pos_x, self.pos_y), (self.menu_width, self.menu_height))
+        # need this for rendering individual font texts
+        self.font = pygame.font.Font(self.font_style, self.font_size)
+        # this is not necessary so i'll keep it contained only here
+        title_font = pygame.font.Font(self.font_style, self.title_font_size)
 
-            menu_items_list.append((text, text_rect))
-            temp_top += int(text.get_size()[1]*self.spacing)
+        # these two are the only things needed for rendering title text
+        self.title = title_font.render(self.menu_title, True, self.title_color)
+        self.title_rect = self.title.get_rect()
+        self.title_rect.center = (self.pos_x + (self.menu_width // 2),
+                                  self.pos_y + self.title_rect.height // 2 + self.menu_padding['t'])
+
+        # where to start rendering the menu items, depends on the title presence
+        if self.menu_title:
+            self.title_rect_bottom = self.title_rect.center[1] + self.title_rect.height // 2 + self.menu_item_spacing
+        else:
+            self.title_rect_bottom = self.pos_y + self.menu_padding['t']
+
+        # pre-render the menu items to avoid further computation
+        # each index contains tuple of ( (menu item tile, active menu item tile), text rect )
+        self.menu_items_render = []
+        offset_y = self.title_rect_bottom
 
         for ind, menu_item in enumerate(self.menu_items):
-            if ind == self.active:
-                text = font.render(menu_item, True, self.active_color)
-            else:
-                text = font.render(menu_item, True, self.font_color)
-
+            # get set text and text_rect based on menu item index
+            text = self.font.render(menu_item, True, self.font_color)
+            text_active = self.font.render(menu_item, True, self.active_color)
             text_rect = text.get_rect()
-            text_rect.center = (
-                menu_item_left_bound,
-                temp_top
-            )
+            text_rect.center = (self.pos_x + self.menu_width // 2, offset_y + text_rect.height // 2)
+            offset_y += text_rect.height + self.menu_item_spacing
 
-            temp_top += int(text.get_size()[1]*self.spacing)
+            self.menu_items_render.append(((text, text_active), text_rect))
 
-            menu_items_list.append((text, text_rect))
+    '''
+        The user can implement render in whatever order he/she wants
+    '''
 
-        return menu_items_list
+    def render(self):
+        # for now this active setting will be here
+        if self.cursor:
+            self.__set_active_cursor()
 
-    def set_active(self, where=0):
-        if where == 0:
-            raise Exception('Must provide the named argument, where= greater than or less than zero')
-        if where > 0:
-            self.active = self.active + 1 if self.active < len(self.menu_items)-1 else 0
-        else:
-            self.active = self.active - 1 if self.active > 0 else len(self.menu_items) - 1
+        pygame.draw.rect(self.__screen, self.menu_background_color, self.menu_box_obj)
+        self.__screen.blit(self.title, self.title_rect)
 
-    def execute_action(self, *args, **kwargs):
-        action = self.menu_actions[self.active]
-        action(*args, **kwargs)
+        counter = 0
+        for (text, active_text), text_rect in self.menu_items_render:
+            if counter == self.__active:
+                self.__screen.blit(active_text, text_rect)
+            else:
+                self.__screen.blit(text, text_rect)
+
+            counter += 1
+
+    '''
+        setting active cursor can be done internally 
+    '''
+
+    def __set_active_cursor(self):
+        x, y = pygame.mouse.get_pos()
+
+        for ind, menu_item in enumerate(self.menu_items_render):
+            menu_item_rect = menu_item[1]
+
+            if abs(x - menu_item_rect.center[0]) < (menu_item_rect.width >> 1) \
+                    and abs(y - menu_item_rect.center[1]) < (menu_item_rect.height >> 1):
+                self.__active = ind
+                return
+
+        self.__active = -1
+
+    # GLOBAL ACTIONS
+
+    '''
+        Active toggle is not internal behavior so user must set 
+    '''
+
+    def set_active_toggle(self, move=0):
+        if move > 0:
+            self.__active = self.__active + 1 if (self.__active + 1 <= len(self.menu_items) - 1) else 0
+        elif move < 0:
+            self.__active = self.__active - 1 if (self.__active - 1 >= 0) else len(self.menu_items) - 1
+
+    def execute_action_toggle(self):
+        if self.cursor:
+            raise Exception('''
+                Cursor is enabled:
+                    calling the toggle function with the cursor enabled can cause errors
+                    to enable the toggle to work, disable cursor in the constructor...
+
+                    ex. BasicMenuBar( ... cursor=False)
+
+                    note that cursor=False by default
+            ''')
+
+    def execute_action_cursor(self, btn, *args, **kwargs):
+        if not self.cursor:
+            raise Exception('''
+                Cursor is disabled:
+                    calling the cursor function with the cursor disabled can cause errors
+                    to enable cursor to work, supply it in the constructor...
+
+                    ex. BasicMenuBar( ... cursor=True)
+            ''')
+        # cursor actions means click events, otherwise the space bar press
+        if btn == 1 and self.__active >= 0:
+            return self.menu_actions[self.__active](*args, **kwargs)
+
+    def reset_active(self):
+        self.__active = -1
 
     def get_active(self):
-        return self.active
+        return self.__active

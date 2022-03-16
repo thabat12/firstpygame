@@ -1,4 +1,7 @@
 import pygame
+import sys, os
+
+# sys.path.append(os.getcwd())
 
 from internal.PygameApp import PygameApp, Screen
 from widgets.BasicMenuBar import BasicMenuBar
@@ -10,11 +13,13 @@ clock = pygame.time.Clock()
 size, screen = None, None
 
 
-def action(size, screen):
+def action():
     print('action executed')
 
 
 '''
+    I mainly made these classes for annotations ahead of functions so ik what i'm doing
+
     @PygameApp:
         Creates the window and initializes everything for you
         Supports function based windows that can be added on to each other
@@ -23,6 +28,29 @@ def action(size, screen):
         Verifies that the function parameters are set correctly
         Validates the new function-based screen
 '''
+
+
+class HomeScreenNavResults:
+    mapmaker = 'mapmaker'
+    quit = 'quit'
+    newgame = 'newgame'
+    loadgame = 'loadgame'
+
+
+def nav_to_newgame():
+    return HomeScreenNavResults.newgame
+
+
+def nav_to_loadgame():
+    return HomeScreenNavResults.loadgame
+
+
+def nav_to_mapmaker():
+    return HomeScreenNavResults.mapmaker
+
+
+def nav_to_quit():
+    return HomeScreenNavResults.quit
 
 
 @PygameApp
@@ -34,30 +62,44 @@ def main_screen(sizep=None, screenp=None):
     menu_width, menu_height = 600, 300
     menu_rect = pygame.rect.Rect(size[0] // 2 - menu_width // 2, size[1] // 2 - menu_height // 2, menu_width,
                                  menu_height)
+    menu_padding = {
+        't': 40,
+        'b': 10
+    }
 
-    menu = BasicMenuBar(
-        screen=screen, menu_width=menu_width,
-        menu_height=menu_height, menu_items=['new game', 'load game', 'map maker', 'quit'],
-        menu_actions=[action, action, map_maker_screen, pygame.quit], menu_items_color=(100, 50, 100), active_color=(100, 0, 0),
-        spacing=1.5
-    )
+    menu_items = ['new game', 'load game', 'map maker', 'quit']
+    menu_actions = [nav_to_newgame, nav_to_loadgame, nav_to_mapmaker, nav_to_quit]
 
-    menu.render()
+    menu = BasicMenuBar(screen, menu_width, menu_height, pos_x=(size[0] // 2) - (menu_width // 2),
+                        pos_y=(size[1] // 2) - (menu_height // 2), menu_items=menu_items,
+                        menu_actions=menu_actions, menu_title='Welcome!', menu_padding=menu_padding,
+                        font_color=(0, 0, 0), font_size=25, title_font_size=35, menu_item_spacing=15, cursor=True)
+
+    running, result = True, None
 
     while 1:
         clock.tick(60)
+
+        # background
+        screen.fill((0, 0, 0))
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                running = False
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN:
-                    menu.set_active(where=1)
-                elif event.key == pygame.K_UP:
-                    menu.set_active(where=-1)
-                elif event.key == pygame.K_SPACE:
-                    menu.execute_action(size, screen)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    result = menu.execute_action_cursor(1)
+                    running = False
 
-        screen.fill((0, 0, 0))
         menu.render()
         pygame.display.flip()
+
+        if not running and result == HomeScreenNavResults.quit:
+            pygame.quit()
+            break
+        else:
+            running = True
+
+        if result == HomeScreenNavResults.mapmaker:
+            return map_maker_screen(size, screen)

@@ -1,9 +1,12 @@
-import functools
+import abc
+import functools, os
 import pygame
-import time
+from abc import ABC, abstractmethod
 
 '''
-    Makes shit organized
+    @PygameApp:
+        Creates the window and initializes everything for you
+        Supports function based windows that can be added on to each other
 '''
 
 
@@ -26,6 +29,13 @@ class PygameApp:
         pygame.init()
 
         return self.func(*args, **kwargs)
+
+
+'''
+    @Screen:
+            Verifies that the function parameters are set correctly
+            Validates the new function-based screen
+'''
 
 
 class Screen:
@@ -66,5 +76,45 @@ class Screen:
 '''
 
 
+# TODO: implements render tile map
 class RenderTileMap:
     pass
+
+
+'''
+    Loading images with pygame in easier ways
+        - hold list of graphics 
+        - update and display each one of them
+'''
+
+
+class Graphic:
+    def __init__(self, src, dims, screen):
+        if not os.path.isfile(src):
+            raise Exception(f'''
+                Supplied file does not exist:
+                    {src}
+            ''')
+
+        self.image = pygame.image.load(src).convert_alpha()
+        self.image = pygame.transform.scale(self.image, dims)
+        self.__screen = screen
+
+    def render(self, pos):
+        self.__screen.blit(self.image, pos)
+
+
+class Animation(ABC):
+    def __init__(self, src_folder, dims, screen, fps=60):
+
+        if not os.path.isdir(src_folder):
+            raise Exception('''
+                No such directory present
+            ''')
+
+        self.sprites = []
+
+        for filename in os.listdir(src_folder):
+            self.sprites.append(Graphic(os.path.join(src_folder, filename), dims, screen))
+
+        self.clock = 0
