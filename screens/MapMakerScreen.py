@@ -44,11 +44,11 @@ def map_maker_screen(size, screen):
         font_color=(255, 255, 255, 0), font_size=15, menu_background_color=(0, 0, 0, 1)
     )
 
-    btn = BasicButton(
-        (100, 100), (100, 100), screen, action, src='man_idle.png',
-        border=5, border_color=(0, 255, 0), active_color=(255, 255, 255), active_border_color=(255, 0, 0),
-        cursor=True, toggle=False
-    )
+    # btn = BasicButton(
+    #     (100, 100), (100, 100), screen, action, src='man_idle.png',
+    #     border=5, border_color=(0, 255, 0), active_color=(255, 255, 255), active_border_color=(255, 0, 0),
+    #     cursor=True, toggle=False
+    # )
 
     sample_graphic = Graphic('../tests/man_idle.png', (100, 100), screen)
 
@@ -62,8 +62,12 @@ def map_maker_screen(size, screen):
 
     print(anim.head)
 
-    gallery = BasicGalleryOptions((100, 100), (0, 0), screen, image_list_src='../internal/game_files/map_tiles/default_sprites', tag_list=[0,0],
-                                  text_description_list=['hi', 'hi'], title='Select')
+    gallery = BasicGalleryOptions(
+        (75, 75), (0, 0), screen, image_list_src='../internal/game_files/map_tiles/default_sprites/tileset_default',
+        tag_list=[0,0,0,0,0,0,0,0,0],text_description_list=['white block','red block','green block','r','r','r','r','r','r'],
+        title='Select', font_size=10, tile_vertical_spacing=20, page_arrow_size=20, page_arrow_border_color=(0, 0, 0),
+        page_arrow_border=2
+    )
 
     running = True
 
@@ -86,11 +90,10 @@ def map_maker_screen(size, screen):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    btn.execute_action()
+                    print('click')
 
         gallery.render()
         # menu.render()
-        btn.render()
 
         if not running:
             break

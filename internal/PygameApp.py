@@ -1,5 +1,5 @@
 import abc
-import functools, os
+import functools, os, warnings
 import pygame
 import time
 from abc import ABC, abstractmethod
@@ -62,6 +62,56 @@ class Screen:
                 ''')
 
         return self.func(*args, **kwargs)
+
+
+'''
+    A common problem that I'm running into, ordering files based on index values, 
+    so now its time to make a simple function to handle that... this file is being placed
+    here because that's just how the order requires it... im still kind of a noob but i think
+    theres no other way to make it more "global" other than to make my own module but this file
+    itself is a module that's good enough
+'''
+
+
+def order_files_by_index(file_list):
+    def convert_digits(digits):
+        res = 0
+
+        for d in digits:
+            res *= 10
+            res += d
+
+        return res
+
+    def get_file_index(file):
+        start = None
+
+        if file[0].isdigit():
+            start = 0
+        elif '.' in file:
+            # have to files ending with things like ".png" validated too
+            rev_ind = file.rindex('.')
+            if not file[rev_ind - 1].isdigit():
+                raise Exception(f'''
+                                Invalid file ordering! 
+                                    - file order must be given index either strictly at the end of the file name
+                                        or at the beginning 
+
+                                    error file: {file}
+                            ''')
+            else:
+                start = rev_ind - 1
+
+        cur = start
+        digits = []
+
+        while file[cur].isdigit():
+            digits.append(int(file[cur]))
+            cur = cur + 1 if (start == 0) else cur - 1
+
+        return convert_digits(digits)
+
+    return sorted(file_list, key=lambda x: get_file_index(x))
 
 
 '''
@@ -178,23 +228,23 @@ class AnimationSequence:
 
         self.delay_seconds = delay_seconds
         self.elapsed = 0
+        self.start = 0
 
     def __init_with_filepath(self, src_folder, dims, screen):
         files = os.listdir(src_folder)
 
-        # TODO: fix this and make it more specific
-        # must provide number indexing either at front or behind
-        def init_with_filepath_indexer(file_name):
-            res = 0
-
-            digits = [int(i) for i in file_name if i.isdigit()]
-
-            for d in digits:
-                res *= 10
-                res += d
-            return res
-
-        files = sorted(files, key=lambda x: init_with_filepath_indexer(x))
+        # try to order the files, but if that doesn't work, don't bother
+        try:
+            files = order_files_by_index(files)
+        except:
+            warnings.warn(f'''
+                Filenames are not properly indexed in src folder: {src_folder}
+                    proper file names for animations must have a numberical index
+                    order either strictly at the beginning or end of the file name
+                    
+                    ex. <filename>0.png OR 0<filename>.png
+            ''')
+            print('')
 
         # starting the process
         self.cur.val = Graphic(os.path.join(src_folder, files[0]), dims, screen)
@@ -237,17 +287,17 @@ class AnimationSequence:
     def reset(self):
         self.cur = self.head
 
-    # works like an iterator (so i can learn iterators)
+    # works like an iterator
     def __iter__(self):
         return self.cur
 
-    # works with time delays (pretty simple again)
+    # works with time delays
     def __next__(self):
         self.elapsed = time.time()
 
-        if self.elapsed > self.delay_seconds:
+        if self.elapsed - self.start > self.delay_seconds:
             self.cur = self.cur.next
-            self.elapsed = 0
+            self.start = time.time()
 
         return self.cur
 

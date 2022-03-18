@@ -14,7 +14,7 @@ from internal.PygameApp import Graphic
 class BasicButton:
     def __init__(self, dims, pos, screen, action, background_color=(255, 255, 255),
                  active_color=(255, 0, 0), text=None, font_size=15, font_style='freesansbold.ttf',
-                 font_color=(0, 0, 0), src=None, border=None, padding=10, active_border_color=(255, 0, 0),
+                 font_color=(0, 0, 0), src=None, graphic=None, border=None, padding=10, active_border_color=(255, 0, 0),
                  border_color=(0, 0, 0), image_dims=None, cursor=False, toggle=False):
 
         if not callable(action):
@@ -27,7 +27,13 @@ class BasicButton:
         if image_dims:
             img_dims = image_dims
 
-        self.btn_image = Graphic(src, img_dims, screen) if src else None
+        if src:
+            self.btn_image = Graphic(src, img_dims, screen)
+        elif graphic:
+            self.btn_image = graphic
+        else:
+            self.btn_image = None
+
         self.button_obj = pygame.rect.Rect(pos, dims)
         self.background_color = background_color
         self.active_color = active_color

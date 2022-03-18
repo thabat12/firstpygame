@@ -1,7 +1,8 @@
 import os
 import pygame
+import math
 
-from internal.PygameApp import Graphic
+from internal.PygameApp import Graphic, order_files_by_index
 from .BasicButton import BasicButton
 
 '''
@@ -16,15 +17,18 @@ from .BasicButton import BasicButton
         2. Gallery list will return a tag that either corresponds to user's own tags or None
         3. Gallery list will also toggle the selection buttons when rendering 
             (depending on user preference)
-        4. User uses the returned tags for whatever purpose they desire
+        4. User uses the returned tags for whatever purpose they need
 '''
+
 
 # TODO: make the text description list optional later
 class BasicGalleryOptions:
     def __init__(self, tile_dims, pos, screen, image_list_src='', text_description_list=[], tag_list=[],
                  font_style='freesansbold.ttf', font_color=(0, 0, 0), gallery_background_color=(255, 255, 255),
                  padding=None, tile_horizontal_spacing=10, tile_vertical_spacing=10, font_size=20, title='',
-                 title_color=(0, 0, 0), title_font_size=20, grid_dims=None):
+                 title_color=(0, 0, 0), title_font_size=20, grid_dims=None, tile_border=5, cursor=True,
+                 page_arrow_color=(255, 0, 0), page_arrow_size=15, page_active_color=(0, 255, 0),
+                 page_arrow_border_color=None, page_arrow_border_active_color=(0, 0, 0), page_arrow_border=5):
 
         if not tile_dims:
             tile_dims = (100, 100)
@@ -33,11 +37,10 @@ class BasicGalleryOptions:
         if not grid_dims:
             grid_dims = (3, 2)
 
-        if not image_list_src or not tag_list \
-                or not (len(text_description_list) == len(tag_list)):
+        if not image_list_src or not tag_list:
             raise Exception('''
-                    There needs to be a list of buttons in button list of type: BasicButton that correspond to 
-                    the text description list items... also they cannot be empty
+                    There needs to be a list of tags, so you can get the results of the gallery option!
+                        lmao u suck at this
                 ''')
 
         if padding and set(padding.keys()) != {'t', 'b', 'l', 'r'}:
@@ -65,17 +68,37 @@ class BasicGalleryOptions:
         self.title = title
         self.title_color = title_color
         self.title_font_size = title_font_size
+        self.tile_border = tile_border
+        self.cursor = cursor
+        self.page_arrow_color = page_arrow_color
+        self.page_arrow_size = page_arrow_size
+        self.page_active_color = page_active_color
+        self.page_arrow_border_color = page_arrow_border_color
+        self.page_arrow_border = page_arrow_border
+        self.page_arrow_border_active_color = page_arrow_border_active_color
 
         # title object (doing this first for height calculation)
-        self.font = pygame.font.Font(self.font_style, self.title_font_size)
-        self.title_to_render = self.font.render(self.title, True, self.title_color)
+        self.title_font = pygame.font.Font(self.font_style, self.title_font_size)
+        self.font = pygame.font.Font(self.font_style, self.font_size)
+
+        # sample text to see what size its going to be
+        sample_font = self.font.render('sample', True, (0, 0, 0))
+        sample_font_height = sample_font.get_height() if text_description_list else 0
+
+        # title may or may not take up space when rendering
+        self.title_to_render = self.title_font.render(self.title, True, self.title_color)
         self.title_to_render_rect = self.title_to_render.get_rect()
+
+        # toggle buttons may or may not be present
+        self.are_page_arrows = len(self.tag_list)//(self.grid_dims[0] * self.grid_dims[1]) != 0
+        page_arrow_w = (self.page_arrow_size + self.tile_horizontal_spacing) if self.are_page_arrows else 0
 
         # calculating width and height for the pane box dimensions
         self.width = (self.tile_dims[0] * self.grid_dims[0]) + self.padding['l'] + self.padding['r'] + \
-                     (self.tile_horizontal_spacing * (self.grid_dims[0] - 1))
+                     (self.tile_horizontal_spacing * (self.grid_dims[0] - 1)) + page_arrow_w * 2
         self.height = (self.tile_dims[1] * self.grid_dims[1]) + self.padding['t'] + self.padding['b'] + \
-                      (self.tile_vertical_spacing * self.grid_dims[1]) + self.title_to_render.get_size()[1]
+                      (self.tile_vertical_spacing * (self.grid_dims[1]-1)) + self.title_to_render.get_size()[1] + \
+                      (self.grid_dims[1] * sample_font_height)
 
         self.title_to_render_rect.center = (
             self.pos[0] + (int(self.width) >> 1),
@@ -92,7 +115,7 @@ class BasicGalleryOptions:
                 these are just going to be buttons but there needs to be some toggle options
                 also for toggles, this thing has to make sure its pressing the right thing
                 
-                very confusing 
+                confusing 
         '''
         # index corresponds to tag
         self.tag_map = {i: tag for i, tag in enumerate(self.tag_list)}
@@ -109,44 +132,132 @@ class BasicGalleryOptions:
 
         self.__init_tile_tabs()
 
-        # debugging purposes
-        print(f'''
-            pos_x : {self.pos[0]}
-            pos_y : {self.pos[1]}
-            width : {self.width}
-            height : {self.height}
-            title_center : {self.title_to_render_rect.center}
-            title_color : {self.title_color}
-        
-        ''')
-
     def __init_tile_tabs(self):
+
+        print(self.image_list_src)
         # first i need to load the images for the buttons
         image_files = os.listdir(self.image_list_src)
+        image_files_list = []
         # TODO: order the image files by number index, seems like i could use a module for this
 
         # we will have an image list
         for img_file in image_files:
             cur_file = os.path.join(self.image_list_src, img_file)
-            self.image_list.append(Graphic(cur_file, self.tile_dims, self.__screen))
+            image_files_list.append(cur_file)
 
-        if not (len(self.image_list) == len(self.tag_list)):
+        if not (len(image_files_list) == len(self.tag_list)):
             raise Exception(f'''
                 The length of the image list does not correspond to the tag list (things will get buggy!)
                     image list: {self.image_list}
                     tag list: {self.tag_list}
             ''')
 
-        for ind, img in enumerate(self.image_list):
-            self.button_list.append(
-                BasicButton(
-                    self.tile_dims, self.pos, self.__screen, lambda x: self.tag_map[ind], toggle=True, border=5
+        # ordering the image files list
+        image_files_list = order_files_by_index(image_files_list)
+
+        # all the total tiles divided by how many each page can hold (ceil the result)
+        # also going to figure out the spacing here for each page
+        page_pos_list = []
+        x_pos_w_page_arrow = self.page_arrow_size if self.are_page_arrows else 0
+        xpos, ypos = self.padding['l'] + self.page_arrow_size + self.tile_horizontal_spacing, self.padding['t'] + self.render_start_y_offset
+        for r in range(self.grid_dims[1]):
+            for c in range(self.grid_dims[0]):
+                page_pos_list.append( (xpos, ypos) )
+                xpos += self.tile_dims[0] + self.tile_horizontal_spacing
+
+            ypos += self.tile_dims[1] + self.tile_vertical_spacing
+            xpos = self.padding['l'] + self.page_arrow_size + self.tile_horizontal_spacing
+
+        # filling the page list with the proper spacing for each page
+        # for every batch of n elements in each grid, assign positions on the page
+        filled = False
+        for i in range(0, len(self.tag_list), self.grid_dims[0]*self.grid_dims[1]):
+            cur_page = []
+
+            if filled:
+                break
+
+            for j in range(0, self.grid_dims[0] * self.grid_dims[1]):
+                # if there is nothing left to append to page, break out
+                if len(self.tag_list) == i+j:
+                    filled = True
+                    break
+
+                cur_btn = BasicButton(
+                    self.tile_dims, page_pos_list[j], self.__screen, lambda x: self.tag_map[i+j], toggle=True,
+                    border=self.tile_border, src=image_files_list[i+j], padding=self.tile_border
                 )
+
+                cur_text_to_append = None
+                if self.text_description_list:
+                    cur_text = self.font.render(self.text_description_list[i+j], True, self.font_color)
+                    cur_text_rect = cur_text.get_rect()
+                    cur_text_rect.center = (
+                        cur_btn.pos_x + (self.tile_dims[0] >> 1),
+                        cur_btn.pos_y + self.tile_dims[1] + (self.tile_vertical_spacing >> 1)
+                    )
+
+                    cur_text_to_append = (cur_text, cur_text_rect)
+
+                cur_page.append((cur_btn, cur_text_to_append))
+
+            self.page_list.append(cur_page)
+
+        # finally (before i lose my mind and become insane), time to make the arrows render
+        self.left_arrow_points, self.right_arrow_points = None, None
+        self.left_arrow_hit_box, self.right_arrow_hit_box = None, None
+
+        if self.are_page_arrows:
+            self.left_arrow_points = (
+                (self.pos[0] + self.padding['l'] + self.page_arrow_size, self.pos[1] + (self.height >> 1) - (self.page_arrow_size >> 1)),
+                (self.pos[0] + self.padding['l'], self.pos[1] + (self.height >> 1)),
+                (self.pos[0] + self.padding['l'] + self.page_arrow_size, self.pos[1] + (self.height >> 1) + (self.page_arrow_size >> 1))
+            )
+
+            self.right_arrow_points = (
+                (self.pos[0] + self.width - self.padding['r'] - self.page_arrow_size, self.pos[1] + (self.height >> 1) - (self.page_arrow_size >> 1)),
+                (self.pos[0] + self.width - self.padding['r'], self.pos[1] + (self.height >> 1)),
+                (self.pos[0] + self.width - self.padding['r'] - self.page_arrow_size, self.pos[1] + (self.height >> 1) + (self.page_arrow_size >> 1))
+            )
+
+            # for future reference to detect clicking, making
+            # format : ( (x1, y1), (x2, y2) )
+            self.left_arrow_hit_box = (
+                (self.left_arrow_points[1][0], self.left_arrow_points[0][1]),
+                (self.left_arrow_points[1][0], self.left_arrow_points[0][1])
+            )
+
+            self.right_arrow_hit_box = (
+                (self.right_arrow_points[0][0], self.right_arrow_points[0][1]),
+                (self.right_arrow_points[2][1], self.right_arrow_points[2][0])
             )
 
     def render(self):
         pygame.draw.rect(self.__screen, self.gallery_background_color, self.pane_background_obj)
         self.__screen.blit(self.title_to_render, self.title_to_render_rect)
+
+        page = self.page_list[self.active_page]
+
+        for btn, text in page:
+            btn.render()
+            if self.text_description_list:
+                self.__screen.blit(text[0], text[1])
+
+        if self.are_page_arrows:
+            # TODO: get the points and store them to avoid recomputation
+            pygame.draw.polygon(self.__screen, self.page_arrow_color, self.left_arrow_points)
+            pygame.draw.polygon(self.__screen, self.page_arrow_color, self.right_arrow_points)
+
+            if self.page_arrow_border_color:
+                pygame.draw.polygon(self.__screen, self.page_arrow_border_color,
+                                    self.left_arrow_points, self.page_arrow_border)
+                pygame.draw.polygon(self.__screen, self.page_arrow_border_color,
+                                    self.right_arrow_points, self.page_arrow_border)
+
+    # TODO: map the x,y pos of the click to any certain action, return value of result, update states of the proper elements
+    # TODO: ... within this class...
+    def click_action_with_cursor(self):
+        pass
 
     def page_forward(self):
         pass
