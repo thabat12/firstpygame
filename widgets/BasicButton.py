@@ -7,14 +7,15 @@ from internal.PygameApp import Graphic
         - images
         - actions supplied
         - borders, active colors, image resizing!
+        - supports toggle mode and button clicking mode
 '''
 
 
 class BasicButton:
-    def __init__(self, dims, pos, action, screen, background_color=(255, 255, 255),
+    def __init__(self, dims, pos, screen, action, background_color=(255, 255, 255),
                  active_color=(255, 0, 0), text=None, font_size=15, font_style='freesansbold.ttf',
-                 font_color=(0,0,0), src=None, border=None, padding=10, active_border_color=(255, 0, 0),
-                 border_color = (0, 0, 0), image_dims=None):
+                 font_color=(0, 0, 0), src=None, border=None, padding=10, active_border_color=(255, 0, 0),
+                 border_color=(0, 0, 0), image_dims=None, cursor=False, toggle=False):
 
         if not callable(action):
             raise Exception('''
@@ -34,10 +35,12 @@ class BasicButton:
         self.border = border
         self.border_color = border_color
         self.active_border_color = active_border_color
+        self.cursor = cursor
+        self.toggle = toggle
 
         # either through ratios or pixel values
-        self.width = dims[0] if dims[0] >= 1 else screen.width * dims[0]
-        self.height = dims[1] if dims[1] >= 1 else screen.heigth * dims[1]
+        self.width = dims[0] if dims[0] > 1 else screen.width * dims[0]
+        self.height = dims[1] if dims[1] > 1 else screen.heigth * dims[1]
         self.pos_x = pos[0]
         self.pos_y = pos[1]
         self.padding = padding
@@ -52,35 +55,66 @@ class BasicButton:
         )
 
         self.__active = False
-        self.__screen = screen
+        self._screen = screen
+        self.__pressed = False
 
         self.__action = action
 
     def render(self):
-        self.__get_active()
-        pygame.draw.rect(self.__screen, self.background_color if not self.__active else self.active_color,
+        # if there is a cursor, button will automatically handle active state
+        # otherwise, user must do that by themselves
+        self.__set_active()
+
+        if self.toggle:
+            self.__active = self.__pressed if self.__pressed else self.__active
+
+        pygame.draw.rect(self._screen, self.background_color if not self.__active else self.active_color,
                          self.button_obj)
 
         if self.border:
-            pygame.draw.rect(self.__screen,
-                             self.active_border_color if self.__active else self.border_color, self.button_obj, self.border)
+            pygame.draw.rect(self._screen,
+                             self.active_border_color if self.__active else self.border_color, self.button_obj,
+                             self.border)
 
         if self.btn_image:
             self.btn_image.render((self.pos_x + self.padding, self.pos_y + self.padding))
 
         if self.text:
-            self.__screen.blit(self.title_text, self.title_rect)
+            self._screen.blit(self.title_text, self.title_rect)
 
-    def __get_active(self):
+    def __is_cursor_hover(self):
         x, y = pygame.mouse.get_pos()
 
-        if abs(x - (self.pos_x + (self.width >> 1))) < (self.width >> 1) and abs(y - (self.pos_y + (self.height >> 1))) < (self.height >> 1):
-            self.__active = True
+        if abs(x - (self.pos_x + (self.width >> 1))) < (self.width >> 1) and abs(
+                y - (self.pos_y + (self.height >> 1))) < (self.height >> 1):
+            return True
         else:
-            self.__active = False
+            return False
+
+    # cursor native behavior
+    def __set_active(self):
+        self.__active = self.__is_cursor_hover()
+
+    def toggle_active_with_cursor(self):
+        if not self.toggle:
+            raise Exception('''
+                Toggle mode must be turned on!
+                    ex. BasicButton( ..., toggle= True)
+            ''')
+        if self.__is_cursor_hover():
+            self.__pressed = (not self.__pressed)
+
+    def clear_toggle(self):
+        if not self.toggle:
+            raise Exception('''
+                Toggle mode must be turned on!
+                    ex. BasicButton( ..., toggle= True)
+            ''')
+        self.__pressed = False
 
     # because there is only one action, we can pass *args, **kwargs
     def execute_action(self, *args, **kwargs):
+        # this will be determined by the last frame call (which is close enough)
         if not self.__active:
             return
 

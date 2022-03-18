@@ -8,11 +8,11 @@ class BasicMenuBar:
                  font_size=20, title_font_size=30, menu_item_spacing=10, menu_padding=None,
                  menu_title='', cursor=False):
 
-        '''
+        """
             Handling exceptions:
                 - If I am supplying a menu padding, at least have the top and bottom values
                 - I need menu items that correspond to menu actions (these can be None values)
-        '''
+        """
         if menu_padding is None:
             menu_padding = {'t': 10, 'b': 10}
         elif set(menu_padding.keys()) != {'t', 'b'}:

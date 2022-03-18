@@ -1,3 +1,5 @@
+import os
+
 import numpy
 import numpy as np
 from PIL import Image
@@ -14,6 +16,9 @@ import sys
                 writes a solid box of a certain color
 '''
 
+PATH = ''
+
+
 def write_hollow_box(color=(255, 0, 0), name='hollow_box', border=10):
     arr = np.zeros((100, 100, 3), dtype=np.uint8)
     arr[:, 0:border] = color
@@ -21,7 +26,7 @@ def write_hollow_box(color=(255, 0, 0), name='hollow_box', border=10):
     arr[border:, -border:] = color
     arr[-border:, border:-border] = color
     img = Image.fromarray(arr)
-    img.save(f'{name}.png')
+    img.save(f'{PATH}/{name}.png')
 
 
 def write_solid_box(color=(255, 255, 255), name='solid_box'):
@@ -32,4 +37,11 @@ def write_solid_box(color=(255, 255, 255), name='solid_box'):
             arr[x, y, :] = list(color)
     print(np.shape(arr))
     img = Image.fromarray(arr)
-    img.save(f'{name}.png')
+    img.save(f'{PATH}/{name}.png')
+
+
+PATH = '/tileset_default'
+
+write_solid_box((255, 255, 255), name='white_solid')
+write_solid_box((255, 0, 0), name='red_solid')
+write_solid_box((0, 255, 0), name='green_solid')
