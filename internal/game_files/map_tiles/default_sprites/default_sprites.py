@@ -40,7 +40,7 @@ def write_solid_box(color=(255, 255, 255), name='solid_box'):
     img.save(f'{PATH}/{name}.png')
 
 
-PATH = '/tileset_default'
+PATH = 'tileset_default'
 
 write_solid_box((255, 255, 255), name='white_solid')
 write_solid_box((255, 0, 0), name='red_solid')
