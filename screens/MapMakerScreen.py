@@ -64,9 +64,10 @@ def map_maker_screen(size, screen):
 
     gallery = BasicGalleryOptions(
         (75, 75), (0, 0), screen, image_list_src='../internal/game_files/map_tiles/default_sprites/tileset_default',
-        tag_list=[0,0,0,0,0,0,0,0,0],text_description_list=['white block','red block','green block','r','r','r','r','r','r'],
+        tag_list=[0, 0, 'hihihi', 0, 0, 0, 0, 0, 0],
+        text_description_list=['white block', 'red block', 'green block', 'r', 'r', 'r', 'r', 'r', 'r'],
         title='Select', font_size=10, tile_vertical_spacing=20, page_arrow_size=20, page_arrow_border_color=(0, 0, 0),
-        page_arrow_border=2
+        page_arrow_border=2, is_toggle=True
     )
 
     running = True
@@ -90,7 +91,9 @@ def map_maker_screen(size, screen):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    print('click')
+                    res = gallery.click_action_with_cursor()
+                    if res:
+                        print(f'tag is {res}')
 
         gallery.render()
         # menu.render()

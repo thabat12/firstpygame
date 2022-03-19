@@ -15,7 +15,7 @@ class BasicButton:
     def __init__(self, dims, pos, screen, action, background_color=(255, 255, 255),
                  active_color=(255, 0, 0), text=None, font_size=15, font_style='freesansbold.ttf',
                  font_color=(0, 0, 0), src=None, graphic=None, border=None, padding=10, active_border_color=(255, 0, 0),
-                 border_color=(0, 0, 0), image_dims=None, cursor=False, toggle=False):
+                 border_color=(0, 0, 0), image_dims=None, cursor=False, toggle=False, *args, **kwargs):
 
         if not callable(action):
             raise Exception('''
@@ -60,9 +60,9 @@ class BasicButton:
             self.pos_y + (self.height >> 1)
         )
 
-        self.__active = False
+        self._active = False
         self._screen = screen
-        self.__pressed = False
+        self._pressed = False
 
         self.__action = action
 
@@ -72,14 +72,14 @@ class BasicButton:
         self.__set_active()
 
         if self.toggle:
-            self.__active = self.__pressed if self.__pressed else self.__active
+            self._active = self._pressed if self._pressed else self._active
 
-        pygame.draw.rect(self._screen, self.background_color if not self.__active else self.active_color,
+        pygame.draw.rect(self._screen, self.background_color if not self._active else self.active_color,
                          self.button_obj)
 
         if self.border:
             pygame.draw.rect(self._screen,
-                             self.active_border_color if self.__active else self.border_color, self.button_obj,
+                             self.active_border_color if self._active else self.border_color, self.button_obj,
                              self.border)
 
         if self.btn_image:
@@ -91,15 +91,12 @@ class BasicButton:
     def __is_cursor_hover(self):
         x, y = pygame.mouse.get_pos()
 
-        if abs(x - (self.pos_x + (self.width >> 1))) < (self.width >> 1) and abs(
-                y - (self.pos_y + (self.height >> 1))) < (self.height >> 1):
-            return True
-        else:
-            return False
+        return abs(x - (self.pos_x + (self.width >> 1))) < (self.width >> 1) and abs(
+            y - (self.pos_y + (self.height >> 1))) < (self.height >> 1)
 
     # cursor native behavior
     def __set_active(self):
-        self.__active = self.__is_cursor_hover()
+        self._active = self.__is_cursor_hover()
 
     def toggle_active_with_cursor(self):
         if not self.toggle:
@@ -108,7 +105,7 @@ class BasicButton:
                     ex. BasicButton( ..., toggle= True)
             ''')
         if self.__is_cursor_hover():
-            self.__pressed = (not self.__pressed)
+            self._pressed = (not self._pressed)
 
     def clear_toggle(self):
         if not self.toggle:
@@ -116,12 +113,43 @@ class BasicButton:
                 Toggle mode must be turned on!
                     ex. BasicButton( ..., toggle= True)
             ''')
-        self.__pressed = False
+        self._pressed = False
 
     # because there is only one action, we can pass *args, **kwargs
     def execute_action(self, *args, **kwargs):
         # this will be determined by the last frame call (which is close enough)
-        if not self.__active:
+        if not self._active:
             return
-
         return self.__action(*args, **kwargs)
+
+
+# TODO: is this the best way to solve the kwargs issues in python?
+class BasicButtonGalleryOptions(BasicButton):
+    def __init__(self, *args, **kwargs):
+        # make a basic button but add some properties to use specifically for gallery options
+        button_page_index = None
+        for kwarg in kwargs:
+            if kwarg == 'button_page_index':
+                button_page_index = kwargs[kwarg]
+
+        if button_page_index is None:
+            raise Exception(f'''
+                No button_page_index parameter supplied (are you sure you meant to use this class?)
+                    supply this parameter to use the class
+                    
+                    ex. BasicButtonGalleryOptions( ..., button_page_index= <integer-variable>)
+            ''')
+
+        super().__init__(*args, **kwargs)
+
+        self.__button_page_index = button_page_index
+
+    def get_button_page_index(self):
+        return self.__button_page_index
+
+    def get_is_active(self):
+        return self._active
+
+    # overriding function to avoid redundant cursor hover check (specific case for gallery button)
+    def toggle_active_with_cursor(self):
+        self._pressed = (not self._pressed)

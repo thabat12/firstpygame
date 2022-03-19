@@ -3,7 +3,7 @@ import pygame
 import math
 
 from internal.PygameApp import Graphic, order_files_by_index
-from .BasicButton import BasicButton
+from .BasicButton import BasicButtonGalleryOptions
 
 '''
     Basic Gallery Options
@@ -28,7 +28,8 @@ class BasicGalleryOptions:
                  padding=None, tile_horizontal_spacing=10, tile_vertical_spacing=10, font_size=20, title='',
                  title_color=(0, 0, 0), title_font_size=20, grid_dims=None, tile_border=5, cursor=True,
                  page_arrow_color=(255, 0, 0), page_arrow_size=15, page_active_color=(0, 255, 0),
-                 page_arrow_border_color=None, page_arrow_border_active_color=(0, 0, 0), page_arrow_border=5):
+                 page_arrow_border_color=None, page_arrow_border_active_color=(0, 0, 0), page_arrow_border=5,
+                 is_toggle=False):
 
         if not tile_dims:
             tile_dims = (100, 100)
@@ -76,6 +77,7 @@ class BasicGalleryOptions:
         self.page_arrow_border_color = page_arrow_border_color
         self.page_arrow_border = page_arrow_border
         self.page_arrow_border_active_color = page_arrow_border_active_color
+        self.is_toggle = is_toggle
 
         # title object (doing this first for height calculation)
         self.title_font = pygame.font.Font(self.font_style, self.title_font_size)
@@ -90,14 +92,14 @@ class BasicGalleryOptions:
         self.title_to_render_rect = self.title_to_render.get_rect()
 
         # toggle buttons may or may not be present
-        self.are_page_arrows = len(self.tag_list)//(self.grid_dims[0] * self.grid_dims[1]) != 0
+        self.are_page_arrows = len(self.tag_list) // (self.grid_dims[0] * self.grid_dims[1]) != 0
         page_arrow_w = (self.page_arrow_size + self.tile_horizontal_spacing) if self.are_page_arrows else 0
 
         # calculating width and height for the pane box dimensions
         self.width = (self.tile_dims[0] * self.grid_dims[0]) + self.padding['l'] + self.padding['r'] + \
                      (self.tile_horizontal_spacing * (self.grid_dims[0] - 1)) + page_arrow_w * 2
         self.height = (self.tile_dims[1] * self.grid_dims[1]) + self.padding['t'] + self.padding['b'] + \
-                      (self.tile_vertical_spacing * (self.grid_dims[1]-1)) + self.title_to_render.get_size()[1] + \
+                      (self.tile_vertical_spacing * (self.grid_dims[1] - 1)) + self.title_to_render.get_size()[1] + \
                       (self.grid_dims[1] * sample_font_height)
 
         self.title_to_render_rect.center = (
@@ -134,7 +136,6 @@ class BasicGalleryOptions:
 
     def __init_tile_tabs(self):
 
-        print(self.image_list_src)
         # first i need to load the images for the buttons
         image_files = os.listdir(self.image_list_src)
         image_files_list = []
@@ -159,10 +160,11 @@ class BasicGalleryOptions:
         # also going to figure out the spacing here for each page
         page_pos_list = []
         x_pos_w_page_arrow = self.page_arrow_size if self.are_page_arrows else 0
-        xpos, ypos = self.padding['l'] + self.page_arrow_size + self.tile_horizontal_spacing, self.padding['t'] + self.render_start_y_offset
+        xpos, ypos = self.padding['l'] + self.page_arrow_size + self.tile_horizontal_spacing, self.padding[
+            't'] + self.render_start_y_offset
         for r in range(self.grid_dims[1]):
             for c in range(self.grid_dims[0]):
-                page_pos_list.append( (xpos, ypos) )
+                page_pos_list.append((xpos, ypos))
                 xpos += self.tile_dims[0] + self.tile_horizontal_spacing
 
             ypos += self.tile_dims[1] + self.tile_vertical_spacing
@@ -171,7 +173,7 @@ class BasicGalleryOptions:
         # filling the page list with the proper spacing for each page
         # for every batch of n elements in each grid, assign positions on the page
         filled = False
-        for i in range(0, len(self.tag_list), self.grid_dims[0]*self.grid_dims[1]):
+        for i in range(0, len(self.tag_list), self.grid_dims[0] * self.grid_dims[1]):
             cur_page = []
 
             if filled:
@@ -179,18 +181,19 @@ class BasicGalleryOptions:
 
             for j in range(0, self.grid_dims[0] * self.grid_dims[1]):
                 # if there is nothing left to append to page, break out
-                if len(self.tag_list) == i+j:
+                if len(self.tag_list) == i + j:
                     filled = True
                     break
 
-                cur_btn = BasicButton(
-                    self.tile_dims, page_pos_list[j], self.__screen, lambda x: self.tag_map[i+j], toggle=True,
-                    border=self.tile_border, src=image_files_list[i+j], padding=self.tile_border
+                cur_btn = BasicButtonGalleryOptions(
+                    self.tile_dims, page_pos_list[j], self.__screen, lambda x: self.tag_map[x], toggle=self.is_toggle,
+                    border=self.tile_border, src=image_files_list[i + j], padding=self.tile_border,
+                    button_page_index=i + j
                 )
 
                 cur_text_to_append = None
                 if self.text_description_list:
-                    cur_text = self.font.render(self.text_description_list[i+j], True, self.font_color)
+                    cur_text = self.font.render(self.text_description_list[i + j], True, self.font_color)
                     cur_text_rect = cur_text.get_rect()
                     cur_text_rect.center = (
                         cur_btn.pos_x + (self.tile_dims[0] >> 1),
@@ -209,27 +212,31 @@ class BasicGalleryOptions:
 
         if self.are_page_arrows:
             self.left_arrow_points = (
-                (self.pos[0] + self.padding['l'] + self.page_arrow_size, self.pos[1] + (self.height >> 1) - (self.page_arrow_size >> 1)),
+                (self.pos[0] + self.padding['l'] + self.page_arrow_size,
+                 self.pos[1] + (self.height >> 1) - (self.page_arrow_size >> 1)),
                 (self.pos[0] + self.padding['l'], self.pos[1] + (self.height >> 1)),
-                (self.pos[0] + self.padding['l'] + self.page_arrow_size, self.pos[1] + (self.height >> 1) + (self.page_arrow_size >> 1))
+                (self.pos[0] + self.padding['l'] + self.page_arrow_size,
+                 self.pos[1] + (self.height >> 1) + (self.page_arrow_size >> 1))
             )
 
             self.right_arrow_points = (
-                (self.pos[0] + self.width - self.padding['r'] - self.page_arrow_size, self.pos[1] + (self.height >> 1) - (self.page_arrow_size >> 1)),
+                (self.pos[0] + self.width - self.padding['r'] - self.page_arrow_size,
+                 self.pos[1] + (self.height >> 1) - (self.page_arrow_size >> 1)),
                 (self.pos[0] + self.width - self.padding['r'], self.pos[1] + (self.height >> 1)),
-                (self.pos[0] + self.width - self.padding['r'] - self.page_arrow_size, self.pos[1] + (self.height >> 1) + (self.page_arrow_size >> 1))
+                (self.pos[0] + self.width - self.padding['r'] - self.page_arrow_size,
+                 self.pos[1] + (self.height >> 1) + (self.page_arrow_size >> 1))
             )
 
             # for future reference to detect clicking, making
             # format : ( (x1, y1), (x2, y2) )
             self.left_arrow_hit_box = (
                 (self.left_arrow_points[1][0], self.left_arrow_points[0][1]),
-                (self.left_arrow_points[1][0], self.left_arrow_points[0][1])
+                (self.left_arrow_points[2][0], self.left_arrow_points[2][1])
             )
 
             self.right_arrow_hit_box = (
                 (self.right_arrow_points[0][0], self.right_arrow_points[0][1]),
-                (self.right_arrow_points[2][1], self.right_arrow_points[2][0])
+                (self.right_arrow_points[1][0], self.right_arrow_points[2][1])
             )
 
     def render(self):
@@ -244,23 +251,74 @@ class BasicGalleryOptions:
                 self.__screen.blit(text[0], text[1])
 
         if self.are_page_arrows:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
             # TODO: get the points and store them to avoid recomputation
-            pygame.draw.polygon(self.__screen, self.page_arrow_color, self.left_arrow_points)
-            pygame.draw.polygon(self.__screen, self.page_arrow_color, self.right_arrow_points)
+            left_active, right_active = self.__is_mouse_pos_in_left_arrow_hit_box(mouse_x, mouse_y), \
+                                            self.__is_mouse_pos_in_right_arrow_hit_box(mouse_x, mouse_y)
+
+            pygame.draw.polygon(self.__screen, self.page_arrow_color if not left_active else self.page_active_color, self.left_arrow_points)
+            pygame.draw.polygon(self.__screen, self.page_arrow_color if not right_active else self.page_active_color, self.right_arrow_points)
 
             if self.page_arrow_border_color:
-                pygame.draw.polygon(self.__screen, self.page_arrow_border_color,
+                pygame.draw.polygon(self.__screen, self.page_arrow_border_color if not left_active else self.page_arrow_border_active_color,
                                     self.left_arrow_points, self.page_arrow_border)
-                pygame.draw.polygon(self.__screen, self.page_arrow_border_color,
+                pygame.draw.polygon(self.__screen, self.page_arrow_border_color if not right_active else self.page_arrow_border_active_color,
                                     self.right_arrow_points, self.page_arrow_border)
 
-    # TODO: map the x,y pos of the click to any certain action, return value of result, update states of the proper elements
-    # TODO: ... within this class...
+    # query every button until one is (maybe) found... query page buttons until one is (maybe) found
     def click_action_with_cursor(self):
-        pass
+        if not self.cursor:
+            raise Exception('''
+                Warning: cursor is disabled
+                    you have to enable cursor to be able to use this method or things will get buggy
+                    
+                    ex. BasicGalleryOptions( ... cursor=True)
+            ''')
+
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        # storing the active page as a list of buttons that the current page is showing (this is used later in function)
+        active_page = self.page_list[self.active_page]
+
+        # if the mouse clicks are out of the boundary, return early (save computation time)
+        if (mouse_x > self.pos[0] + self.width) or (mouse_x < self.pos[0]) or \
+                (mouse_y < self.pos[1]) or (mouse_y > self.pos[1] + self.height):
+            return None
+
+        # if x and y are within the box constraints of the page buttons, then page forward or backwards
+        if self.__is_mouse_pos_in_left_arrow_hit_box(mouse_x, mouse_y):
+            self.active_page = len(self.page_list)-1 if (self.active_page == 0) else self.active_page - 1
+            return None
+        elif self.__is_mouse_pos_in_right_arrow_hit_box(mouse_x, mouse_y):
+            self.active_page = 0 if (self.active_page == len(self.page_list) - 1) else self.active_page + 1
+            return None
+
+        # querying each button to see whether user is on one and will return the tag result -- O(N) complexity
+        for btn, _ in active_page:
+            ind = btn.get_button_page_index()
+            res = btn.execute_action(ind)
+
+            # buttons can return tags, if the tag is returned (from lambdas), then return and break out
+            if res is not None:
+                btn.toggle_active_with_cursor()
+                if self.current_toggle:
+                    self.current_toggle.clear_toggle()
+
+                self.current_toggle = btn
+
+                return res
+
+    # formatted like this: ((x1, y1), (x2, y2))
+    def __is_mouse_pos_in_left_arrow_hit_box(self, mouse_x, mouse_y):
+        return self.left_arrow_hit_box[0][0] <= mouse_x <= self.left_arrow_hit_box[1][0] and \
+                    self.left_arrow_hit_box[0][1] <= mouse_y <= self.left_arrow_hit_box[1][1]
+
+    def __is_mouse_pos_in_right_arrow_hit_box(self, mouse_x, mouse_y):
+        return self.right_arrow_hit_box[0][0] <= mouse_x <= self.right_arrow_hit_box[1][0] and \
+                self.right_arrow_hit_box[0][1] <= mouse_y <= self.right_arrow_hit_box[1][1]
 
     def page_forward(self):
-        pass
+        self.active_page = 0 if (self.active_page == len(self.page_list) - 1) else self.active_page + 1
 
     def page_backward(self):
-        pass
+        self.active_page = len(self.page_list)-1 if (self.active_page == 0) else self.active_page - 1
