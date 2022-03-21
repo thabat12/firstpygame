@@ -1,6 +1,7 @@
 import pygame
 
 
+# TODO: implement tags instead of actions, update constructor to conform to other Basic classes
 class BasicMenuBar:
     def __init__(self, screen, menu_width, menu_height, menu_items=[], menu_actions=[],
                  pos_x=0, pos_y=0, menu_background_color=(255, 255, 255), font_color=(0, 0, 0),
@@ -120,7 +121,8 @@ class BasicMenuBar:
         setting active cursor can be done internally 
     '''
 
-    def __set_active_cursor(self):
+    # returns the index of whatever is active so far
+    def is_cursor_hover(self):
         x, y = pygame.mouse.get_pos()
 
         for ind, menu_item in enumerate(self.menu_items_render):
@@ -128,10 +130,12 @@ class BasicMenuBar:
 
             if abs(x - menu_item_rect.center[0]) < (menu_item_rect.width >> 1) \
                     and abs(y - menu_item_rect.center[1]) < (menu_item_rect.height >> 1):
-                self.__active = ind
-                return
+                return ind
 
-        self.__active = -1
+        return -1
+
+    def __set_active_cursor(self):
+        self.__active = self.is_cursor_hover()
 
     # GLOBAL ACTIONS
 
