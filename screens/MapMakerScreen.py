@@ -1,8 +1,8 @@
 import pygame, sys, os
 # sys.path.append(os.getcwd())
 from internal.PygameApp import Screen, Graphic, AnimationSequence
-from widgets.BasicGalleryOptions import BasicGalleryOptions
-from widgets.basic_widgets import BasicButton, BasicMenuBar
+# from widgets.BasicGalleryOptions import BasicGalleryOptions
+from widgets.basic_widgets import BasicButton, BasicMenuBar, BasicGalleryOptions
 
 clock = pygame.time.Clock()
 
@@ -69,8 +69,6 @@ def action():
     print('action time!')
 
 
-
-
 @Screen
 def map_maker_screen(size, screen):
     # menu = BasicMenuBar(
@@ -85,13 +83,18 @@ def map_maker_screen(size, screen):
     # )
 
     button = BasicButton(
-        (100, 100), (100, 100), screen, background_color=(255, 255, 255, 100), title='button', src='../internal/game_files/map_tiles/default_sprites/tileset_default/red_solid2.png',
-        padding={'t': 10, 'b': 10, 'l': 10, 'r': 10}, title_color=(255, 255, 255), border=4, toggle=False, action=lambda:print('action executed')
+        (100, 100), (100, 100), screen, background_color=(255, 255, 255, 100), title='button',
+        src='../internal/game_files/map_tiles/default_sprites/tileset_default/red_solid2.png',
+        padding={'t': 10, 'b': 10, 'l': 10, 'r': 10}, title_color=(255, 255, 255), border=4, toggle=False,
+        action=lambda: print('action executed')
     )
 
     menu = BasicMenuBar(
-        (150, 150), (100, 100), screen, title='Menu', menu_text_list=['save', 'load', 'hi'], menu_actions=[lambda:None, lambda:print('googoogaga'), lambda:None], font_color=(0,0,0), active_font_color=(255,0,0),
-        background_color=(255,255,255), menu_item_spacing=4, padding={'t':10,'b':10,'l':10,'r':10}, title_size=20, title_item_spacing=10
+        (150, 150), (100, 100), screen, title='Menu', menu_text_list=['save', 'load', 'hi'],
+        menu_actions=[lambda: None, lambda: print('googoogaga'), lambda: None], font_color=(0, 0, 0),
+        active_font_color=(255, 0, 0),
+        background_color=(255, 255, 255), menu_item_spacing=4, padding={'t': 10, 'b': 10, 'l': 10, 'r': 10},
+        title_size=20, title_item_spacing=10
     )
 
     sample_graphic = Graphic('../tests/man_idle.png', (100, 100), screen)
@@ -106,10 +109,11 @@ def map_maker_screen(size, screen):
 
     gallery = BasicGalleryOptions(
         (75, 75), (0, 0), screen, image_list_src='../internal/game_files/map_tiles/default_sprites/tileset_default',
-        tag_list=[0, 0, 'hihihi', 0, 0, 0, 0, 0, 0],
+        tag_list=[0, 1, 2, 3, 4, 5, 6, 7, 8],
         text_description_list=['white block', 'red block', 'green block', 'r', 'r', 'r', 'r', 'r', 'r'],
         title='Select', font_size=10, tile_vertical_spacing=20, page_arrow_size=20, page_arrow_border_color=(0, 0, 0),
-        page_arrow_border=2, is_toggle=True
+        page_arrow_border=2, is_toggle=True, grid_dims=(3, 3), tile_border=4, tile_border_color=(255, 255, 255),
+        tile_active_border_color=(255, 0, 0)
     )
 
     running = True
@@ -134,13 +138,13 @@ def map_maker_screen(size, screen):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     button.click()
-                    gallery.click_action_with_cursor()
+                    print(gallery.click())
                     menu.click()
 
-        # gallery.render()
+        gallery.render()
         menu.render()
         # pane.render()
-        # button.render()
+        button.render()
 
         if not running:
             break

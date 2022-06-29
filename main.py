@@ -87,7 +87,8 @@ while 1:
                 elif active == 1:
                     convert_matrix(mapMatrix)
                 elif active == 2:
-                    from_tsv('testing.tsv')
+                    df = from_tsv('testing.tsv')
+
 
         mousex, mousey = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()

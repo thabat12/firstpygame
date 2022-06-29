@@ -2,7 +2,7 @@ import sys, os
 from abc import ABC, abstractmethod, abstractproperty
 import pygame
 
-from internal.PygameApp import Graphic
+from internal.PygameApp import Graphic, order_files_by_index
 
 '''
     BasicWidget (ABSTRACT) is the parent of all widget classes and requires the common functionality to render
@@ -42,10 +42,11 @@ class BasicWidget(ABC):
         s = pygame.Surface(self._dims, pygame.SRCALPHA)
         s.fill(self._background_color)
         self._background_object_box = s
+        del s
 
         # for blit method inside render, saving render x and render y coordinates, avoids re-computation
         self._render_x_pos, self._render_y_pos = self._pos[0] - (self._dims[0] >> 1), self._pos[1] - (
-                    self._dims[1] >> 1)
+                self._dims[1] >> 1)
         # title is also in this category, but will leave to concrete classes to position title in render
         title_font = pygame.font.Font(self._font_style, self._title_size)
         self._title_font_to_render = title_font.render(self._title, True, self._title_color)
@@ -269,11 +270,22 @@ class BasicButton(BasicWidgetClickable):
         self._screen.blit(self._title_font_to_render if not self._active else self._title_font_to_render_active,
                           self._title_font_to_render_rect)
 
+    def __str__(self):
+        return f'''
+            BasicButton:
+                position: {self._pos}
+                dims: {self._dims}
+                image: {self.btn_image}
+        '''
+
 
 '''
     QueryGroupWidget (ABSTRACT) defines widgets made up of one or more widgets: when user clicks on this sort of 
     widget, QueryGroupWidget will essentially page through every "button" and either return the tag specified or 
         return nothing
+        
+    What new variables is this looking for? 
+        - in kwargs: active_page_button_list
 
 '''
 
@@ -289,9 +301,10 @@ class QueryGroupWidget(BasicWidget):
         print(self._padding, self._title_font_to_render_rect.center[1], self._title_font_to_render.get_height(),
               'title font to render rect center y')
 
-        self._active_page_button_list = kwargs.get('active_page_button_list')
-
+        # this should be supplied to the kwargs of the super function
+        self._page_button_list = kwargs.get('page_button_list')
         self._active_page = 0
+        self._active_page_button_list = self._page_button_list[self._active_page]
 
     @abstractmethod
     def render(self):
@@ -332,7 +345,7 @@ class BasicMenuBar(QueryGroupWidget):
             text_rendered = font.render('text', True, font_color)
             print('start y offset changed')
             start_y_offset = pos[1] - (text_rendered.get_height() >> 1) - (
-                        (menu_item_spacing + text_rendered.get_height()) * (len(menu_text_list) // 2))
+                    (menu_item_spacing + text_rendered.get_height()) * (len(menu_text_list) // 2))
 
         if title_item_spacing:
             font = pygame.font.Font(font_style, title_size)
@@ -366,7 +379,7 @@ class BasicMenuBar(QueryGroupWidget):
                          active_font_color=active_font_color,
                          menu_item_spacing=menu_item_spacing, font_size=font_size, font_color=font_color,
                          is_vertical=is_vertical,
-                         active_page_button_list=text_to_render_buttons, *args, **kwargs)
+                         page_button_list=[text_to_render_buttons], *args, **kwargs)
 
     def render(self):
         super().render()
@@ -378,19 +391,98 @@ class BasicMenuBar(QueryGroupWidget):
     
         functionality:
             change the current active group of buttons with pages (if there are multiple pages)
+            
+        things to do: 
+        
+            assign variables to...
+            - kwargs.get('active_page_button_list')
 '''
 
 
 class BasicGalleryOptions(QueryGroupWidget):
     def __init__(self, pos, dims, screen, background_color=(255, 255, 255), title='', title_size=15, font_size=10,
                  font_style='freesansbold.ttf', title_color=(0, 0, 0), border=0, border_color=(0, 0, 0),
-                 padding=None, image_list_src='', text_description_list=[], tag_list=[], action_list=[],
-                 tile_dims=(100, 100),
-                 tile_horizontal_apcing=10, tile_vertical_spacing=10, page_arrow_color=(255, 0, 0), page_arrow_size=15,
-                 page_active_color=(0, 255, 0),
-                 page_arrow_border_color=(0, 0, 0), page_arrow_border_active_color=(0, 0, 0), page_arrow_border=0,
-                 is_toggle=False, **kwargs):
-        pass
+                 padding=None, image_list_src='', image_list=None, text_description_list=None, tag_list=None,
+                 action_list=None, tile_dims=(100, 100), grid_dims=(3, 2), tile_horizontal_spacing=10,
+                 tile_vertical_spacing=10, tile_background_color=(255, 255, 255), page_arrow_color=(255, 0, 0),
+                 page_arrow_size=15, page_active_color=(0, 255, 0), page_arrow_border_color=(0, 0, 0),
+                 tile_border=False,
+                 tile_border_color=(0, 0, 0), tile_padding=0, tile_active_background_color=(0, 0, 0),
+                 tile_active_border_color=(255, 255, 255), tile_active_font_color=(0, 0, 0),
+                 page_arrow_border_active_color=(0, 0, 0), page_arrow_border=0, is_toggle=False, *args, **kwargs):
+
+        if not (tag_list or action_list):
+            raise Exception('Must provide tag list or action list')
+
+        action_list = []
+        if tag_list:
+            for t in tag_list:
+                action_list.append(lambda: t)
+
+        # fill this in with the proper things
+        temp_image_list = []
+
+        if not (image_list or image_list_src):
+            raise Exception('Must provide an image list or an image list src')
+
+        if image_list_src:
+            image_list = []
+            src_list = os.listdir(image_list_src)
+            src_list = order_files_by_index(src_list)
+            for ind, s in enumerate(src_list):
+                path = os.path.join(image_list_src, s)
+                image_list.append(Graphic(path, tile_dims, screen))
+
+        # first thing to do is initialize the active page button list, and the lists that come after that
+        counter = 0
+        temp_overall_list = []
+        temp_button_list = []
+
+        while counter < len(action_list):
+
+            px, py = pos[0] - (dims[0] >> 1) + tile_dims[0], pos[1] - (dims[1] >> 1) + tile_dims[1]
+
+            for r in range(grid_dims[0]):
+                for c in range(grid_dims[1]):
+                    if counter == len(action_list):
+                        break
+
+
+                    #TODO: fix this closure situation
+                    temp_button_list.append(BasicButton(
+                        (px, py), tile_dims, screen, background_color=tile_background_color, border=tile_border,
+                        border_color=tile_border_color, padding=tile_padding,
+                        action=action_list[counter] if action_list else lambda: tag_list[counter],
+                        active_color=tile_active_background_color, active_border_color=tile_active_border_color,
+                        cursor=True, graphic=image_list[counter], image_dims=(tile_dims[0] - 10, tile_dims[1] - 10)
+                        )
+                    )
+
+                    px += tile_dims[0] + tile_horizontal_spacing
+
+                    counter += 1
+
+                px = pos[0] - (dims[0] >> 1) + tile_dims[0]
+                py += tile_dims[1] + tile_horizontal_spacing
+
+                temp_overall_list.append(temp_button_list)
+
+            # end of double for loop
+
+            page_button_list = temp_overall_list
+            del temp_overall_list
+
+            super().__init__(
+                pos=pos, dims=dims, screen=screen, background_color=background_color, active_color=background_color,
+                title=title, title_size=title_size, font_style='freesansbold.ttf', title_color=title_color,
+                border=border, border_color=border_color, padding=padding,
+                page_button_list=page_button_list)
+
+        # if image_list_src:
+        #     img_paths = order_files_by_index(os.listdir(image_list_src))
+
+        # super().__init__(pos=pos, dims=dims, screen=screen, background_color=background_color, title=title, title_size=title_size,
+        #                  font_style=font_style, title_color=title_color, border=border, border_color=border_color, padding=padding)
 
     def render(self):
-        pass
+        super().render()

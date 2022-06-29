@@ -22,7 +22,7 @@ from .BasicButton import BasicButtonGalleryOptions
 
 
 # TODO: make the text description list optional later
-class BasicGalleryOptions:
+class GalleryOptions:
     def __init__(self, tile_dims, pos, screen, image_list_src='', text_description_list=[], tag_list=[],
                  font_style='freesansbold.ttf', font_color=(0, 0, 0), gallery_background_color=(255, 255, 255),
                  padding=None, tile_horizontal_spacing=10, tile_vertical_spacing=10, font_size=20, title='',

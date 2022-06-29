@@ -139,6 +139,10 @@ class RenderTileMap:
 
 
 class Graphic:
+
+    def load_graphic_src(self):
+        order_files_by_index()
+
     def __init__(self, src, dims, screen):
         if not os.path.isfile(src):
             raise Exception(f'''
