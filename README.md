@@ -1,0 +1,3 @@
+# firstpygame
+
+Building a basic mini-framework to host pygame apps... 
